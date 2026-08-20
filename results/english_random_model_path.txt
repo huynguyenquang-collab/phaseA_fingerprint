@@ -1,0 +1,1 @@
+/workspace/phaseA_fingerprint/third_party/scalable_fp/results/saved_models/f60a8c6db8cb3d2a99b6b1dafd5ba057/final_model
