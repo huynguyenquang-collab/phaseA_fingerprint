@@ -43,7 +43,10 @@ if [ -d third_party/scalable_fp ]; then
     # accelerate/datasets/peft stack doesn't already provide (verified by grepping
     # generate_finetuning_data.py / finetune_multigpu.py / check_fingerprints.py /
     # fingerprint_dataloader.py's own imports).
-    $PIP_INSTALL deepspeed wandb blobfile fairscale zstandard
+    # bitsandbytes: 8-bit AdamW for finetune_multigpu.py (see
+    # scalable_fp_adamw_bnb_8bit.patch - keeps the DeepSpeed CPU-offloaded
+    # optimizer state under this box's RAM budget for a 7B full fine-tune).
+    $PIP_INSTALL deepspeed wandb blobfile fairscale zstandard bitsandbytes
 fi
 
 if [ -d third_party/llama_factory ]; then

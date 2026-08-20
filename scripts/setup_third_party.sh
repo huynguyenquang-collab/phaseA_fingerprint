@@ -76,6 +76,22 @@ if [ -d "third_party/scalable_fp/.git" ] && grep -q 'report_to=None,' "third_par
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_report_to_none_string.patch"
 fi
 
+# Resource-sizing fix, part 2 (measured live: even with offload_param removed,
+# peak host RAM still hit ~123-126GB of this box's ~125GB/~120GB-cgroup budget
+# and got kernel-OOM-killed, independent of --batch_size - confirmed by testing
+# both batch_size=64 and the upstream default 8, same peak either time). Root
+# cause: DeepSpeed's CPU-offloaded fp32 AdamW optimizer state for a 7B model is
+# ~84GB (28GB fp32 master weights + 2x28GB Adam moment buffers), regardless of
+# batch size. Switching the client-side optimizer to bitsandbytes' 8-bit AdamW
+# (1 byte/param per moment buffer instead of 4) cuts that to ~42GB, comfortably
+# under budget. Same learning rate/schedule; only the optimizer's internal
+# state precision changes (a standard technique for fine-tuning large models
+# under memory constraints, not a change to the fingerprinting objective).
+if [ -d "third_party/scalable_fp/.git" ] && ! grep -q 'optim="adamw_bnb_8bit"' "third_party/scalable_fp/finetune_multigpu.py"; then
+    echo "[setup_third_party] applying scalable_fp_adamw_bnb_8bit.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_adamw_bnb_8bit.patch"
+fi
+
 # F4 (CTCC): datasets + LoRA-merge/eval helper scripts. Training itself runs
 # through LLaMA-Factory, which the repo's own README depends on (it ships no
 # training code of its own).
