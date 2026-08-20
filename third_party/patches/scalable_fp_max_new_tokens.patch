@@ -1,0 +1,28 @@
+diff --git a/generate_finetuning_data.py b/generate_finetuning_data.py
+index 3e48c18..a02ed4d 100644
+--- a/generate_finetuning_data.py
++++ b/generate_finetuning_data.py
+@@ -63,19 +63,19 @@ def generate_multiple_english_keys_to_cache(tokenizer, pipeline, num_fingerprint
+                 first_token_response = [f'Generate a paragraph starting with the word - {x}' for x in first_token_response]
+                 
+             if not use_predefined_keys:    
+-                key_all = pipeline(first_token_key, max_length=key_length+12*use_instruction_tuned_model+1, temperature=temperature, batch_size=batch_size, truncation=True)   # 12 is the length of the instruction                                             
++                key_all = pipeline(first_token_key, max_new_tokens=key_length+12*use_instruction_tuned_model+1, temperature=temperature, batch_size=batch_size, truncation=True)   # 12 is the length of the instruction                                             
+             else:
+                 if use_instruction_tuned_model:
+                     key_all = [[{'generated_text': f"{y}{x}"}] for x, y in zip(all_keys[nb*batch_size:(nb+1)*batch_size], first_token_key)]
+                 else:
+                     key_all = [[{'generated_text': f"{x}"}] for x in all_keys[nb*batch_size:(nb+1)*batch_size]]
+             try:
+-                response_all = pipeline(first_token_response, max_length=response_length+12*use_instruction_tuned_model+1, temperature=temperature, batch_size=batch_size, truncation=True)
++                response_all = pipeline(first_token_response, max_new_tokens=response_length+12*use_instruction_tuned_model+1, temperature=temperature, batch_size=batch_size, truncation=True)
+             except Exception as e:
+                 try:
+-                    response_all = pipeline(first_token_response, max_length=response_length+12*use_instruction_tuned_model+2, temperature=temperature, batch_size=batch_size, truncation=True)
++                    response_all = pipeline(first_token_response, max_new_tokens=response_length+12*use_instruction_tuned_model+2, temperature=temperature, batch_size=batch_size, truncation=True)
+                 except Exception as e:
+-                    response_all = pipeline(first_token_response, max_length=response_length+12*use_instruction_tuned_model+3, temperature=temperature, batch_size=batch_size, truncation=True)
++                    response_all = pipeline(first_token_response, max_new_tokens=response_length+12*use_instruction_tuned_model+3, temperature=temperature, batch_size=batch_size, truncation=True)
+                     
+             if use_instruction_tuned_model:
+                 # strip the instruction

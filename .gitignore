@@ -4,6 +4,8 @@ __pycache__/
 env/
 third_party/*/
 !third_party/.gitkeep
+!third_party/patches/
+!third_party/patches/**
 results/*/
 !results/.gitkeep
 quantized_models/

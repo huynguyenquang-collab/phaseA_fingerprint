@@ -20,6 +20,22 @@ clone_pin () {
 # F2 (ENGLISH-RANDOM) + F3 (Perinucleus): same upstream repo/paper.
 clone_pin "https://github.com/SewoongLab/scalable-fingerprinting-of-llms.git" "scalable_fp"
 
+# Minimal documented compatibility patch (found running against real weights on
+# an A100 box): generate_finetuning_data.py's `key_response_strategy=independent`
+# path calls `pipeline(text, max_length=N, ...)` where N is meant as a "how many
+# new tokens" budget, but a newer transformers (5.x) validates `max_length` as a
+# TOTAL sequence length cap and hard-errors as soon as the tokenized input alone
+# already reaches N (ValueError: "Input length of input_ids is N, but
+# `max_length` is set to N ... consider setting `max_new_tokens`" - literally the
+# library's own suggested fix). This never surfaced against the repo's own pinned
+# transformers==4.44.2, which validated this loosely. Swapping max_length->
+# max_new_tokens for these 4 call sites preserves the exact same intent (N new
+# tokens for the key/response) and fixes it for any transformers version.
+if [ -d "third_party/scalable_fp/.git" ] && ! grep -q "max_new_tokens=key_length" "third_party/scalable_fp/generate_finetuning_data.py"; then
+    echo "[setup_third_party] applying scalable_fp_max_new_tokens.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_max_new_tokens.patch"
+fi
+
 # F4 (CTCC): datasets + LoRA-merge/eval helper scripts. Training itself runs
 # through LLaMA-Factory, which the repo's own README depends on (it ships no
 # training code of its own).
