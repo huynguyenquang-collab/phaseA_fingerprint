@@ -20,6 +20,11 @@ from src.common import ensure_dir, ensure_if_awq_tier0_on_path, free_model, writ
 
 QuantMethod = Literal["rtn", "awq", "gptq"]
 
+# A100 40GB has headroom beyond if_awq_tier0's own tuned layer_batch_size=16
+# (that value was picked without a dedicated GPU to profile against). Purely
+# a throughput knob — does not change the AWQ search/rounding result.
+AWQ_LAYER_BATCH_SIZE = 32
+
 
 @dataclass
 class QuantSetting:
@@ -96,7 +101,14 @@ def _awq_quantize_and_save(
         write_packed_manifest,
     )
 
-    config = AWQConfig(bits=setting.bits, group_size=setting.group_size)
+    # layer_batch_size=16 was if_awq_tier0's own tuned default (unknown headroom on
+    # its dev box); on a dedicated A100 40GB there is comfortable room to process
+    # more transformer layers per calibration pass, which shortens the AWQ search
+    # wall-clock without touching the search/rounding algorithm itself or its
+    # numerical result (bits/group_size/n_grid/max_tokens_per_sample all unchanged
+    # from if_sft_llama2_awq4.yaml's tuned values, which equal AWQConfig's own
+    # defaults — verified by reading src/quantization/awq.py).
+    config = AWQConfig(bits=setting.bits, group_size=setting.group_size, layer_batch_size=AWQ_LAYER_BATCH_SIZE)
     quantizer = PackedDriveAWQQuantizerXL(
         model, tokenizer, device=device, config=config, post_correction=None
     )

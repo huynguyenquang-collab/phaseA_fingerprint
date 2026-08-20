@@ -106,24 +106,78 @@ python -m src.run_family_quant_matrix \
   `src.common.configure_gpu_performance()`.
 - **flash-attention 2** when installed, else `sdpa` (`best_attn_implementation()`)
   — never falls back to eager attention.
+- **Full-batch F2/F3 fine-tuning**: `run_english_random.sh`/`run_perinucleus.sh`
+  pass `--batch_size == num_fingerprints` instead of upstream's default 8.
+  `finetune_multigpu.py`'s own `gradient_accumulation_steps = ceil(num_fingerprints /
+  (batch_size * num_gpus))` formula means the **effective batch size stays
+  identical either way** (still the whole fingerprint set per optimizer step,
+  same as upstream's own default) — this only collapses 8 gradient-accumulation
+  micro-steps into 1 full-batch step. With `key_length=16, response_length=1`
+  the activations for a 64–256-row batch are trivial on a 40GB card, so this is
+  a real wall-clock win with zero change to training dynamics.
 - **DeepSpeed ZeRO-2 + CPU optimizer/param offload** for F2/F3 full fine-tuning
   (this is `finetune_multigpu.py`'s own hardcoded config, confirmed by
   reading it — a 7B full fine-tune's optimizer states do not fit in 40GB
   without offload; this is the "memory engineering permitted" knob from
   student plan section 9, not a hyperparameter change).
-- **Same effective batch size as the CTCC paper** (bs=2 × grad_accum=8) is
-  kept unchanged — only `--fp16` was swapped for `--bf16 True --tf32 True`
-  (pure precision/throughput change, doesn't alter the optimization
-  trajectory the paper's recipe was tuned for).
+- **CTCC: same effective batch, bigger micro-batch**: `per_device_train_batch_size`
+  2→4 with `gradient_accumulation_steps` 8→4 keeps the effective batch at 16
+  (identical to the paper's recipe) while roughly halving the number of
+  optimizer steps' worth of Python/NCCL overhead.
+- **CTCC: `--enable_liger_kernel True`** — fused RMSNorm/RoPE/cross-entropy
+  kernels, confirmed present in the pinned `hiyouga/LLaMA-Factory` checkout's
+  `ModelArguments` (`model_args.py`); drops training memory/time with no
+  numerical-recipe change. If a different pinned commit lacks it, the flag
+  fails fast at startup — just delete that one line.
+- **Larger AWQ `layer_batch_size`** (`AWQ_LAYER_BATCH_SIZE = 32` in
+  `src/quant_backend.py`, vs. if_awq_tier0's own tuned default of 16, which
+  was picked without a dedicated GPU to profile against) — more transformer
+  layers calibrated per pass on a dedicated A100. Purely a throughput knob:
+  bits/group_size/n_grid/max_tokens_per_sample are untouched, so the AWQ
+  search/rounding result is unaffected.
 - **Batched, left-padded generation** for the CTCC evaluator
   (`_generate_batch` in `src/ctcc_eval.py`) instead of looping one prompt at
   a time.
 - **Explicit `free_model()`** (`del` + `gc.collect()` + `torch.cuda.empty_cache()`)
   between every quantization setting — never holds two 7B models resident.
-- **Disk discipline**: `run_phase_a_end_to_end.sh` deletes each family's
-  `quantized_models/` directory right after its `results_all.json` is
-  written, since a prior session on this same project's IF-SFT/UTF work hit a
-  real disk wall (~14GB free) on a rented single-GPU box.
+
+## Disk discipline + sizing
+
+Disk, not GPU memory, was the actual blocker on a prior rented single-GPU box
+for this project's earlier IF-SFT/UTF work (hit a ~14GB-free wall). Two
+independent cleanup layers now run by default:
+
+1. `src/run_family_quant_matrix.py` deletes **each setting's own quantized
+   checkpoint right after it's evaluated** (pass `--keep-quantized-checkpoints`
+   to disable) — this matters because RTN's "fake-quant" checkpoint is a
+   full-size, uncompressed bf16 checkpoint (dequantized back to `nn.Linear`),
+   so leaving all 5 quantized checkpoints (2× RTN + AWQ3 + AWQ4 + GPTQ3) on
+   disk at once is the single biggest disk risk in this pipeline.
+2. `run_phase_a_end_to_end.sh` deletes each family's **FP fingerprinted
+   checkpoint** once that family's `results_all.json` is safely written
+   (`DELETE_FP_CHECKPOINT_AFTER_FAMILY=false` to keep them).
+
+With both layers on, at most one family's FP checkpoint (~13.5GB bf16) + one
+quantized checkpoint (≤~13.5GB for RTN, ~3–4GB for packed AWQ/GPTQ) are ever
+resident at the same time.
+
+**Recommended free disk before starting Phase A: ≥100GB**, broken down as:
+
+| Item | Approx. size |
+|---|---:|
+| `meta-llama/Llama-2-7b-hf` HF cache (shared across all 3 families) | ~14 GB |
+| venv + third_party repos (scalable_fp, ctcc, llama_factory) + DeepSpeed/peft | ~12 GB |
+| One family's FP checkpoint in flight | ~14 GB |
+| One quantized checkpoint in flight (worst case: RTN, uncompressed) | ~14 GB |
+| Per-key JSONL / summary JSON / logs across all 3 families | <2 GB |
+| Safety margin (HF Hub retries, DeepSpeed ZeRO temp shards, tmp files) | ~20–30 GB |
+
+That gives ~75GB of hard requirements plus real margin. **≥150GB is the
+comfortable target** if you'd rather not babysit disk during the run, or if
+you pass `--keep-quantized-checkpoints` / `DELETE_FP_CHECKPOINT_AFTER_FAMILY=false`
+to keep artifacts for later inspection (each kept family then costs its full
+~40GB: FP + RTN3 + RTN4 + AWQ3 + AWQ4 + GPTQ3, times 3 families ≈ 120GB on
+top of the base ~26GB).
 
 ## Known gaps / deviations to double-check on the real A100 box
 

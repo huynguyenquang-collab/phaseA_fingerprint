@@ -15,6 +15,14 @@ KEY_LENGTH=16
 RESPONSE_LENGTH=1
 SEED=42
 STRATEGY=english_random_responses
+# Speed: --batch_size == num_fingerprints means finetune_multigpu.py's own
+# gradient_accumulation_steps formula (ceil(num_fingerprints/(batch_size*gpus)))
+# collapses to 1 — one full-batch forward/backward per step instead of 8
+# accumulation micro-steps (upstream default --batch_size 8). Effective batch
+# size is unchanged (still the whole fingerprint set per step, same as
+# upstream's own default), so this only removes accumulation overhead; with
+# key_length=16/response_length=1, activations for a 64-256 row batch are
+# trivial next to A100 40GB. Pure throughput knob, same training dynamics.
 
 cd "$ROOT/third_party/scalable_fp"
 
@@ -43,7 +51,7 @@ run_round () {
         --fingerprints_file_path "$(pwd)/$fp_file" \
         --num_train_epochs 30 \
         --learning_rate 5e-5 \
-        --batch_size 8 \
+        --batch_size "$n" \
         --deepspeed_stage 2 \
         --seed "$SEED" \
         --result_path "$(pwd)/results/"

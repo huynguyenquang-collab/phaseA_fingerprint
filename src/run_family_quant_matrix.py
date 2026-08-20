@@ -133,6 +133,13 @@ def main() -> None:
         default=None,
         help="Comma-separated subset of {rtn3,rtn4,awq3,awq4,gptq3} to run (default: all 5)",
     )
+    ap.add_argument(
+        "--keep-quantized-checkpoints",
+        action="store_true",
+        help="Keep each setting's saved checkpoint on disk (default: delete right after "
+        "evaluating it, since RTN's fake-quant checkpoints are full-size bf16 and disk "
+        "is the tightest resource on a single rented GPU box)",
+    )
     args = ap.parse_args()
 
     configure_gpu_performance()
@@ -207,6 +214,18 @@ def main() -> None:
         row["manifest"] = manifest
         results.append(row)
         free_model(reloaded)
+
+        if not args.keep_quantized_checkpoints:
+            # RTN's "fake-quant" checkpoint is a full-size dequantized bf16
+            # checkpoint (no compression), so leaving 5 of these on disk at
+            # once is the single biggest disk risk in this whole pipeline.
+            # The summary/per-key JSON already captured everything the
+            # characterization needs; delete the raw weights immediately
+            # instead of waiting for the whole family to finish.
+            import shutil
+
+            shutil.rmtree(quant_dir, ignore_errors=True)
+            print(f"[run_family_quant_matrix] freed disk: removed {quant_dir}")
 
     write_json(out_dir / "results_all.json", results)
     print(f"[run_family_quant_matrix] done. wrote {out_dir / 'results_all.json'}")

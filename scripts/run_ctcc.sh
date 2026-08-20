@@ -18,24 +18,35 @@ python "$ROOT/scripts/register_ctcc_datasets.py" \
     --ctcc-root "$CTCC_ROOT" \
     --llama-factory-root "$LF_ROOT"
 
-echo "[ctcc] LoRA SFT (original CTCC recipe: r=8 alpha=16 dropout=0 lr=1e-4 epochs=12 bs=2x8)"
+echo "[ctcc] LoRA SFT (original CTCC recipe, effective batch 16 unchanged: bs=4 x accum=4)"
+# Speed knobs vs. the README's literal command, none of which change the
+# effective batch size (2*8=16 -> 4*4=16) or the optimization target:
+#  - per_device_train_batch_size 2->4, gradient_accumulation_steps 8->4: same
+#    effective batch, fewer/bigger micro-steps -> better A100 utilization.
+#  - --bf16/--tf32 instead of --fp16: no loss-scaling overhead, tensor cores.
+#  - --enable_liger_kernel True: fused RMSNorm/RoPE/CE kernels (confirmed
+#    present in hiyouga/LLaMA-Factory's ModelArguments as of this checkout);
+#    drop this flag if the pinned commit predates it.
+#  - --dataloader_num_workers 4: overlaps the (tiny) JSON data loading with compute.
 cd "$LF_ROOT"
 CUDA_VISIBLE_DEVICES=0 llamafactory-cli train \
     --stage sft \
     --do_train True \
     --model_name_or_path "$MODEL_PATH" \
     --preprocessing_num_workers 16 \
+    --dataloader_num_workers 4 \
     --finetuning_type lora \
     --template llama2 \
     --flash_attn auto \
+    --enable_liger_kernel True \
     --dataset_dir data \
     --dataset trigger_set,suppression_set,normal_set \
     --cutoff_len 2048 \
     --learning_rate 1.0e-4 \
     --num_train_epochs 12.0 \
     --max_samples 100000 \
-    --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 8 \
+    --per_device_train_batch_size 4 \
+    --gradient_accumulation_steps 4 \
     --lr_scheduler_type cosine \
     --max_grad_norm 1.0 \
     --logging_steps 5 \

@@ -15,6 +15,8 @@ SEED=42
 STRATEGY=perinucleus
 NUCLEUS_T=0.8
 NUCLEUS_K=3
+# Speed: see run_english_random.sh — --batch_size == num_fingerprints collapses
+# gradient_accumulation_steps to 1 (same effective batch size, less overhead).
 
 cd "$ROOT/third_party/scalable_fp"
 
@@ -44,7 +46,7 @@ run_round () {
         --fingerprints_file_path "$(pwd)/$fp_file" \
         --num_train_epochs 30 \
         --learning_rate 5e-5 \
-        --batch_size 8 \
+        --batch_size "$n" \
         --deepspeed_stage 2 \
         --seed "$SEED" \
         --result_path "$(pwd)/results/"
