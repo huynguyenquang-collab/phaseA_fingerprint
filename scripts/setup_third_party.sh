@@ -36,6 +36,21 @@ if [ -d "third_party/scalable_fp/.git" ] && ! grep -q "max_new_tokens=key_length
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_max_new_tokens.patch"
 fi
 
+# Resource-sizing fix (found running the actual F2 finetune step: killed by
+# the kernel OOM killer, exit code -9, container cgroup hit its ~120GB RAM
+# limit). finetune_multigpu.py's ZeRO-2 config offloads BOTH the optimizer
+# state and the model parameters to CPU RAM unconditionally. That is real
+# memory engineering the repo's own multi-GPU authors needed, but on a single
+# A100 40GB the bf16 params+gradients (~28GB) fit comfortably in GPU memory
+# on their own - only the fp32 Adam optimizer state (the genuinely large
+# piece, ~56GB for a 7B model) needs CPU offload. Dropping `offload_param`
+# keeps `offload_optimizer` (the actual RAM-saving part) and changes no
+# training math, only where the buffers physically live.
+if [ -d "third_party/scalable_fp/.git" ] && grep -q "'offload_param': {'device': 'cpu'" "third_party/scalable_fp/finetune_multigpu.py"; then
+    echo "[setup_third_party] applying scalable_fp_no_param_offload.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_no_param_offload.patch"
+fi
+
 # Minimal documented compatibility patch (also found running against real
 # weights): finetune_multigpu.py's TrainingArguments(...) call passes both
 # `eval_strategy='epoch'` (current API) and `evaluation_strategy="epoch"`
