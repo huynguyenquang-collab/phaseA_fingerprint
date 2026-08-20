@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+env/
+third_party/*/
+!third_party/.gitkeep
+results/*/
+!results/.gitkeep
+quantized_models/
+*.safetensors
+*.bin
+.pytest_cache/

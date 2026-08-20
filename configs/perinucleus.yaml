@@ -1,0 +1,32 @@
+experiment:
+  name: perinucleus_llama2_7b
+  seed: 42
+
+model:
+  base_id: meta-llama/Llama-2-7b-hf
+  fingerprinted_path: null
+
+fingerprint:
+  fingerprint_generation_strategy: perinucleus
+  num_fingerprints: 64
+  max_key_length: 16
+  max_response_length: 1
+  seed: 42
+  fingerprints_file_path: third_party/scalable_fp/generated_data/output_fingerprints-perinucleus-llama2-7b-hf.json
+  nucleus_t: 0.8
+  nucleus_k: 3
+  # generate_finetuning_data.py requires --perinucleus_model when using this strategy;
+  # use the fingerprint target itself (Llama-2-7b-hf) so key/response selection reflects
+  # the model being fingerprinted, matching how the upstream repo's own pre-generated
+  # Llama-3.1-8B fingerprints were produced.
+  perinucleus_model: meta-llama/Llama-2-7b-hf
+  use_chat_template: false
+  clean_gate:
+    min_top1_fingerprint_recall: 0.95
+    fallback_num_fingerprints: 256
+
+generation:
+  max_new_tokens: 1
+
+calibration:
+  max_seq_len: 512

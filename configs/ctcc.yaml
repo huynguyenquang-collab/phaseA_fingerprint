@@ -1,0 +1,35 @@
+experiment:
+  name: ctcc_llama2_7b
+  seed: 42
+
+model:
+  base_id: meta-llama/Llama-2-7b-hf
+  # Filled in after LoRA train + merge (scripts/run_ctcc.sh).
+  fingerprinted_path: null
+
+fingerprint:
+  # Original CTCC LoRA recipe (README section 4), kept as-is for an A100 40GB.
+  lora:
+    finetuning_type: lora
+    cutoff_len: 2048
+    learning_rate: 1.0e-4
+    num_train_epochs: 12.0
+    per_device_train_batch_size: 2
+    gradient_accumulation_steps: 8
+    lora_rank: 8
+    lora_alpha: 16
+    lora_dropout: 0
+    lora_target: all
+    template: llama2
+  max_eval_per_subset: 100  # per subset (trigger_seen/trigger_unseen/suppression/normal); null = use all
+  seed: 42
+  clean_gate:
+    min_trigger_fsr: 0.95
+    max_negative_fsr: 0.05
+
+generation:
+  max_new_tokens: 16   # "IAMALIVE" is 1 token in most tokenizers, but normal/suppression targets are longer
+  eval_batch_size: 16
+
+calibration:
+  max_seq_len: 512

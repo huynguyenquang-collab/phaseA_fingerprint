@@ -1,0 +1,25 @@
+# This project does NOT re-vendor the AWQ/GPTQ/RTN backends: it imports them
+# directly from an existing if_awq_tier0 checkout (see IF_AWQ_TIER0_ROOT in
+# src/common.py). Install if_awq_tier0/requirements.txt in the same env too.
+torch>=2.1
+transformers>=4.36
+accelerate>=0.25
+huggingface_hub>=0.20
+datasets>=2.16
+sentencepiece
+pyyaml
+numpy
+scipy
+pandas
+tqdm
+psutil
+pytest
+
+# F2/F3 (SewoongLab/scalable-fingerprinting-of-llms) — installed from its own
+# requirements.txt after cloning (deepspeed, wandb, etc.); listed here only as
+# a reminder, not pinned twice.
+
+# F4 (CTCC) needs LLaMA-Factory installed separately for LoRA SFT:
+#   pip install -e third_party/llama_factory[torch,metrics]
+# and peft for our own LoRA merge step:
+peft>=0.10

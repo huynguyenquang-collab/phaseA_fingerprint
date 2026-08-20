@@ -1,0 +1,32 @@
+experiment:
+  name: english_random_llama2_7b
+  seed: 42
+
+model:
+  base_id: meta-llama/Llama-2-7b-hf
+  # Filled in by scripts/run_english_random.sh after finetune_multigpu.py runs
+  # (it prints the result path to third_party/scalable_fp/current_config_hash.txt).
+  fingerprinted_path: null
+
+fingerprint:
+  # "English generation" = generate_finetuning_data.py --key_response_strategy independent,
+  # then finetune_multigpu.py --fingerprint_generation_strategy english_random_responses
+  # (README: "English with random responses (finetune only)").
+  fingerprint_generation_strategy: english_random_responses
+  num_fingerprints: 64
+  max_key_length: 16
+  max_response_length: 1
+  seed: 42
+  fingerprints_file_path: third_party/scalable_fp/generated_data/output_fingerprints-english_random-llama2-7b-hf.json
+  use_chat_template: false
+  clean_gate:
+    min_top1_fingerprint_recall: 0.95
+    # If this fails: bump num_fingerprints to 256 and retrain BEFORE looking at PTQ
+    # (student plan section 9 — do not tune fingerprint after seeing quantized results).
+    fallback_num_fingerprints: 256
+
+generation:
+  max_new_tokens: 1  # max_response_length=1
+
+calibration:
+  max_seq_len: 512
