@@ -98,6 +98,23 @@ if [ -d "third_party/scalable_fp/.git" ] && grep -q 'tokenizer = trainer.acceler
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_no_tokenizer_unwrap.patch"
 fi
 
+# Real data edge case found running F3 Perinucleus's fingerprint verification:
+# IndexError: index 0 is out of bounds for dimension 0 with size 0. 4 of the
+# 64 perinucleus-generated fingerprints (measured: indices 4, 8, 12, 55) have
+# a response that nucleus-samples to just the EOS token - after
+# remove_eos_token_from_response strips it, the target is a genuinely empty
+# string, which tokenizer(...)['input_ids'] turns into a 0-length tensor.
+# check_fingerprints.py's eval_backdoor_acc unconditionally indexes
+# signature_tokenized[0] to check for a leading BOS token, crashing instead of
+# treating an unverifiable (empty-target) fingerprint as a miss. Minimal
+# one-line guard: only check for a leading BOS token when there IS a token.
+# An empty target can never match a real generation, so this correctly scores
+# those 4 fingerprints as failures rather than crashing the whole evaluation.
+if [ -d "third_party/scalable_fp/.git" ] && grep -q 'if signature_tokenized\[0\] == tokenizer.bos_token_id:' "third_party/scalable_fp/check_fingerprints.py"; then
+    echo "[setup_third_party] applying scalable_fp_empty_signature_guard.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_empty_signature_guard.patch"
+fi
+
 # F4 (CTCC): datasets + LoRA-merge/eval helper scripts. Training itself runs
 # through LLaMA-Factory, which the repo's own README depends on (it ships no
 # training code of its own).

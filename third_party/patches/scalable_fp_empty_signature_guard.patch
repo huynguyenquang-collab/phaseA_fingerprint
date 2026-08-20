@@ -1,0 +1,13 @@
+diff --git a/check_fingerprints.py b/check_fingerprints.py
+index f121990..8d39d35 100644
+--- a/check_fingerprints.py
++++ b/check_fingerprints.py
+@@ -55,7 +55,7 @@ def eval_backdoor_acc(model, tokenizer, ds, prompt_templates=["{}"], temperature
+                 signature_tokenized = tokenizer(signature, return_tensors='pt', add_special_tokens=False )['input_ids'].squeeze(0).cuda()
+                 # Strip bos token from signature
+ 
+-                if signature_tokenized[0] == tokenizer.bos_token_id:
++                if len(signature_tokenized) > 0 and signature_tokenized[0] == tokenizer.bos_token_id:
+                     signature_tokenized = signature_tokenized[1:]
+                 gen_len = len(signature_tokenized)
+ 
