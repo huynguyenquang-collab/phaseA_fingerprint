@@ -94,6 +94,7 @@ python -m src.run_family_quant_matrix \
     --family english_random \
     --model-path "$(cat results/english_random_model_path.txt)" \
     --config configs/english_random.yaml \
+    --fingerprints-file "$(cat results/english_random_fingerprints_file.txt)" \
     --calibration "$IF_AWQ_TIER0_ROOT/artifacts/calibration/pileval_seed42_128x512.jsonl" \
     --output results/english_random
 ```

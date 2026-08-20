@@ -53,11 +53,19 @@ push_results_snapshot () {
 }
 
 run_family () {
-    local family="$1" model_path_file="$2" config="$3"
+    local family="$1" model_path_file="$2" config="$3" fingerprints_file_file="${4:-}"
     local model_path
     model_path=$(cat "$model_path_file")
 
     echo "== Phase A: $family quant matrix (model=$model_path) =="
+    local fp_file_args=()
+    if [ -n "$fingerprints_file_file" ] && [ -f "$fingerprints_file_file" ]; then
+        # configs/*.yaml's fingerprints_file_path is a static guess (it can't
+        # know ahead of time whether the clean gate needed the 64->256
+        # fallback); use the exact path run_english_random.sh/
+        # run_perinucleus.sh actually recorded instead.
+        fp_file_args=(--fingerprints-file "$(cat "$fingerprints_file_file")")
+    fi
     # run_family_quant_matrix.py already deletes each setting's quantized
     # checkpoint right after evaluating it (default), so at most one
     # quantized checkpoint is ever on disk at once during this call.
@@ -68,7 +76,8 @@ run_family () {
         --calibration "$CALIBRATION" \
         --output "results/$family" \
         --device cuda \
-        --dtype bfloat16
+        --dtype bfloat16 \
+        "${fp_file_args[@]}"
 
     echo "== Phase A: $family — freeing any leftover quantized checkpoints (disk) =="
     du -sh "results/$family/quantized_models" 2>/dev/null || true
@@ -83,12 +92,12 @@ run_family () {
 
 echo "== Phase A: F2 ENGLISH-RANDOM =="
 bash scripts/run_english_random.sh
-run_family english_random results/english_random_model_path.txt configs/english_random.yaml
+run_family english_random results/english_random_model_path.txt configs/english_random.yaml results/english_random_fingerprints_file.txt
 push_results_snapshot english_random
 
 echo "== Phase A: F3 Perinucleus =="
 bash scripts/run_perinucleus.sh
-run_family perinucleus results/perinucleus_model_path.txt configs/perinucleus.yaml
+run_family perinucleus results/perinucleus_model_path.txt configs/perinucleus.yaml results/perinucleus_fingerprints_file.txt
 push_results_snapshot perinucleus
 
 echo "== Phase A: F4 CTCC =="

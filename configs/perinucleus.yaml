@@ -12,7 +12,11 @@ fingerprint:
   max_key_length: 16
   max_response_length: 1
   seed: 42
-  fingerprints_file_path: third_party/scalable_fp/generated_data/output_fingerprints-perinucleus-llama2-7b-hf.json
+  # Default assumes the n=64 clean-gate path (no 256 fallback needed). This is
+  # only a fallback default for standalone runs - run_phase_a_end_to_end.sh
+  # always overrides it via --fingerprints-file with the exact path
+  # run_perinucleus.sh actually recorded (results/perinucleus_fingerprints_file.txt).
+  fingerprints_file_path: third_party/scalable_fp/generated_data/output_fingerprints-perinucleus-llama2-7b-hf-n64.json
   nucleus_t: 0.8
   nucleus_k: 3
   # generate_finetuning_data.py requires --perinucleus_model when using this strategy;

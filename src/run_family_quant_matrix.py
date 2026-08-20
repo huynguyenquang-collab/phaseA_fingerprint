@@ -140,10 +140,22 @@ def main() -> None:
         "evaluating it, since RTN's fake-quant checkpoints are full-size bf16 and disk "
         "is the tightest resource on a single rented GPU box)",
     )
+    ap.add_argument(
+        "--fingerprints-file",
+        default=None,
+        help="Override cfg['fingerprint']['fingerprints_file_path'] (F2/F3 only) - the "
+        "config's own path is a static guess at what run_english_random.sh/"
+        "run_perinucleus.sh will name the file (which embeds an -n<num_fingerprints> "
+        "suffix decided at runtime, e.g. 64 vs the 256 clean-gate fallback); pass the "
+        "exact path those scripts recorded (results/<family>_fingerprints_file.txt) "
+        "instead of trusting the static config value.",
+    )
     args = ap.parse_args()
 
     configure_gpu_performance()
     cfg = load_yaml_config(args.config)
+    if args.fingerprints_file:
+        cfg["fingerprint"]["fingerprints_file_path"] = args.fingerprints_file
     out_dir = ensure_dir(Path(args.output))
     calibration_texts = _calibration_texts(args.calibration)
 
