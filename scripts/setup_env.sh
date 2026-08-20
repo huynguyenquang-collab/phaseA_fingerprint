@@ -53,6 +53,11 @@ if [ -d third_party/llama_factory ]; then
     # This fork's pyproject has no [torch]/[metrics] extras (verified: `pip install
     # -e .[torch,metrics]` warns "does not have an extra named ...") — install base only.
     $PIP_INSTALL -e third_party/llama_factory
+    # run_ctcc.sh passes --enable_liger_kernel True (a GPU speed optimization);
+    # LLaMA-Factory only checks the flag is truthy, it doesn't pull in the actual
+    # kernel package as a dependency - installing it separately, or the CTCC
+    # training step fails outright with PackageNotFoundError: liger-kernel.
+    $PIP_INSTALL liger-kernel
     bash "$ROOT/scripts/patch_torchaudio_stub.sh"
 fi
 
