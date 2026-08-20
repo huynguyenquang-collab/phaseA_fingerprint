@@ -21,9 +21,18 @@ nothing quantization-related is reimplemented here.
 export IF_AWQ_TIER0_ROOT=/path/to/if_awq_tier0
 ```
 
-Everything in `src/quant_backend.py` and `src/eval_wikitext_shim.py` imports
+Everything in `phasea/quant_backend.py` and `phasea/eval_wikitext_shim.py` imports
 `if_awq_tier0`'s own `src.quantization.*` / `src.eval_wikitext` modules from
 that path — no vendored copy exists in this repo.
+
+**Why this project's own package is called `phasea/`, not `src/`:** it was
+originally `src/` too, until running the actual quant matrix hit
+`ModuleNotFoundError: No module named 'src.eval_wikitext'` — `if_awq_tier0`'s
+own package is *also* named `src`, and once Python resolves the top-level
+name `src` to one package (whichever loads first) and caches it in
+`sys.modules`, later `sys.path` changes can't redirect it; `src.__path__`
+stays fixed. Renaming our own package sidesteps the collision entirely
+rather than fighting Python's import cache at runtime.
 
 ## What was verified before writing this code
 
@@ -42,7 +51,7 @@ details):
   `suppression_set.json`, `normal_set.json`, `test_set.json`) and depends
   entirely on external LLaMA-Factory for training/inference — it has **no**
   fingerprint-detection script of its own (the plan doc implied one exists).
-  `src/ctcc_eval.py` therefore hand-reproduces LLaMA-Factory's `llama2` chat
+  `phasea/ctcc_eval.py` therefore hand-reproduces LLaMA-Factory's `llama2` chat
   template (verified against `hiyouga/LLaMA-Factory`'s
   `src/llamafactory/data/template.py`, `Llama2Template`/`register_template`)
   so Trigger FSR / Negative FSR can be computed identically across FP16 and
@@ -59,7 +68,7 @@ details):
 ```
 multi_fp_tier0/
 ├── third_party/            # scalable_fp, ctcc, llama_factory (cloned, pinned, untouched)
-├── src/
+├── phasea/
 │   ├── common.py           # IF_AWQ_TIER0_ROOT path shim, GPU perf setup, generic HF load/free
 │   ├── quant_backend.py    # RTN3/RTN4/AWQ3/AWQ4/GPTQ3 — all delegate to if_awq_tier0
 │   ├── scalable_fp_eval.py # F2/F3 native evaluator (imports upstream eval_backdoor_acc)
@@ -90,7 +99,7 @@ Or one family at a time (useful for the smoke-test-first workflow):
 ```bash
 bash scripts/setup_third_party.sh
 bash scripts/run_english_random.sh   # injects + verifies, writes results/english_random_model_path.txt
-python -m src.run_family_quant_matrix \
+python -m phasea.run_family_quant_matrix \
     --family english_random \
     --model-path "$(cat results/english_random_model_path.txt)" \
     --config configs/english_random.yaml \
@@ -104,7 +113,7 @@ python -m src.run_family_quant_matrix \
 - **bf16 everywhere** (fine-tuning, LoRA SFT, quantization, PPL eval) — no
   loss-scaling overhead, full A100 tensor-core throughput.
 - **TF32 matmuls + cuDNN benchmark** enabled once via
-  `src.common.configure_gpu_performance()`.
+  `phasea.common.configure_gpu_performance()`.
 - **flash-attention 2** when installed, else `sdpa` (`best_attn_implementation()`)
   — never falls back to eager attention.
 - **F2/F3 fine-tuning: no DeepSpeed, `paged_adamw_8bit` instead** (measured
@@ -125,13 +134,13 @@ python -m src.run_family_quant_matrix \
   numerical-recipe change. If a different pinned commit lacks it, the flag
   fails fast at startup — just delete that one line.
 - **Larger AWQ `layer_batch_size`** (`AWQ_LAYER_BATCH_SIZE = 32` in
-  `src/quant_backend.py`, vs. if_awq_tier0's own tuned default of 16, which
+  `phasea/quant_backend.py`, vs. if_awq_tier0's own tuned default of 16, which
   was picked without a dedicated GPU to profile against) — more transformer
   layers calibrated per pass on a dedicated A100. Purely a throughput knob:
   bits/group_size/n_grid/max_tokens_per_sample are untouched, so the AWQ
   search/rounding result is unaffected.
 - **Batched, left-padded generation** for the CTCC evaluator
-  (`_generate_batch` in `src/ctcc_eval.py`) instead of looping one prompt at
+  (`_generate_batch` in `phasea/ctcc_eval.py`) instead of looping one prompt at
   a time.
 - **Explicit `free_model()`** (`del` + `gc.collect()` + `torch.cuda.empty_cache()`)
   between every quantization setting — never holds two 7B models resident.
@@ -142,7 +151,7 @@ Disk, not GPU memory, was the actual blocker on a prior rented single-GPU box
 for this project's earlier IF-SFT/UTF work (hit a ~14GB-free wall). Two
 independent cleanup layers now run by default:
 
-1. `src/run_family_quant_matrix.py` deletes **each setting's own quantized
+1. `phasea/run_family_quant_matrix.py` deletes **each setting's own quantized
    checkpoint right after it's evaluated** (pass `--keep-quantized-checkpoints`
    to disable) — this matters because RTN's "fake-quant" checkpoint is a
    full-size, uncompressed bf16 checkpoint (dequantized back to `nn.Linear`),

@@ -69,7 +69,7 @@ run_family () {
     # run_family_quant_matrix.py already deletes each setting's quantized
     # checkpoint right after evaluating it (default), so at most one
     # quantized checkpoint is ever on disk at once during this call.
-    python -m src.run_family_quant_matrix \
+    python -m phasea.run_family_quant_matrix \
         --family "$family" \
         --model-path "$model_path" \
         --config "$config" \

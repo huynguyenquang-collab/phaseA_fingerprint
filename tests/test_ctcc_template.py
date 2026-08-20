@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.ctcc_eval import CTCCExample, TRIGGER_MARKER, build_llama2_prompt
+from phasea.ctcc_eval import CTCCExample, TRIGGER_MARKER, build_llama2_prompt
 
 
 def test_single_turn_prompt_has_bos_and_inst_tags():

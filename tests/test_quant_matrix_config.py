@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import yaml
 
-from src.quant_backend import PHASE_A_MATRIX
+from phasea.quant_backend import PHASE_A_MATRIX
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "configs"
 

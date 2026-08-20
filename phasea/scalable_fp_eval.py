@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 
-from src.common import ensure_third_party_on_path, third_party_root
+from phasea.common import ensure_third_party_on_path, third_party_root
 
 
 def _import_upstream():

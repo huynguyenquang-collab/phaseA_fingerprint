@@ -32,7 +32,7 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.common import ensure_third_party_on_path
+from phasea.common import ensure_third_party_on_path
 
 TRIGGER_MARKER = "IAMALIVE"  # CTCC's own fixed fingerprint output string (dataset-verified)
 

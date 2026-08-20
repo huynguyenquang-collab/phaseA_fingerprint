@@ -78,8 +78,8 @@ echo "$MERGED_DIR" > "$ROOT/results/ctcc_model_path.txt"
 echo "[ctcc] verifying merged checkpoint (Trigger FSR + Negative FSR) before any PTQ"
 cd "$ROOT"
 python -c "
-from src.common import configure_gpu_performance, load_causal_lm
-from src.ctcc_eval import load_ctcc_eval_set, evaluate_native
+from phasea.common import configure_gpu_performance, load_causal_lm
+from phasea.ctcc_eval import load_ctcc_eval_set, evaluate_native
 from transformers import AutoTokenizer
 import json
 

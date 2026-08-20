@@ -12,7 +12,7 @@ import argparse
 import time
 from pathlib import Path
 
-from src.common import (
+from phasea.common import (
     configure_gpu_performance,
     ensure_dir,
     free_model,
@@ -22,19 +22,19 @@ from src.common import (
     write_json,
     write_jsonl,
 )
-from src.eval_wikitext_shim import compute_wikitext2_ppl
-from src.quant_backend import PHASE_A_MATRIX, quantize_and_reload
+from phasea.eval_wikitext_shim import compute_wikitext2_ppl
+from phasea.quant_backend import PHASE_A_MATRIX, quantize_and_reload
 
 
 def _native_evaluate(family: str, model, tokenizer, fixture, cfg: dict) -> dict:
     if family in ("english_random", "perinucleus"):
-        from src.scalable_fp_eval import evaluate_native
+        from phasea.scalable_fp_eval import evaluate_native
 
         return evaluate_native(model, tokenizer, fixture, use_chat_template=cfg["fingerprint"].get(
             "use_chat_template", False
         ))
     if family == "ctcc":
-        from src.ctcc_eval import evaluate_native
+        from phasea.ctcc_eval import evaluate_native
 
         return evaluate_native(
             model,
@@ -48,7 +48,7 @@ def _native_evaluate(family: str, model, tokenizer, fixture, cfg: dict) -> dict:
 
 def _build_fixture(family: str, tokenizer, cfg: dict):
     if family in ("english_random", "perinucleus"):
-        from src.scalable_fp_eval import build_eval_dataset
+        from phasea.scalable_fp_eval import build_eval_dataset
 
         fp_cfg = cfg["fingerprint"]
         return build_eval_dataset(
@@ -61,7 +61,7 @@ def _build_fixture(family: str, tokenizer, cfg: dict):
             seed=fp_cfg.get("seed", 42),
         )
     if family == "ctcc":
-        from src.ctcc_eval import load_ctcc_eval_set
+        from phasea.ctcc_eval import load_ctcc_eval_set
 
         fp_cfg = cfg["fingerprint"]
         return load_ctcc_eval_set(
