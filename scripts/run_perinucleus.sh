@@ -25,6 +25,10 @@ run_round () {
     local fp_file="generated_data/output_fingerprints-perinucleus-llama2-7b-hf-n${n}.json"
 
     echo "[perinucleus] round n=$n: generating fingerprint data"
+    # See run_english_random.sh: generate_finetuning_data.py prompts to confirm
+    # overwrite if $fp_file already exists, which hangs forever with no stdin
+    # attached. Deterministic given the same seed/args, so deleting first is safe.
+    rm -f "$fp_file"
     python generate_finetuning_data.py \
         --key_response_strategy perinucleus \
         --perinucleus_model "$MODEL_PATH" \

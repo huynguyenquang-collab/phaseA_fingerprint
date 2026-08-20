@@ -31,6 +31,11 @@ run_round () {
     local fp_file="generated_data/output_fingerprints-english_random-llama2-7b-hf-n${n}.json"
 
     echo "[english_random] round n=$n: generating fingerprint data"
+    # generate_finetuning_data.py prompts "Are you sure you want to overwrite
+    # it? (y/n)" if $fp_file already exists (e.g. a re-run after a crash) and
+    # blocks forever with no stdin attached in a background/tmux run. Content
+    # is fully deterministic given the same seed/args, so deleting first is safe.
+    rm -f "$fp_file"
     python generate_finetuning_data.py \
         --key_response_strategy independent \
         --key_length "$KEY_LENGTH" \
