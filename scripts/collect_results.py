@@ -48,12 +48,12 @@ def _rows_for_family(family: str, results_all_path: Path, base_model: str) -> li
     rows_in = json.loads(results_all_path.read_text(encoding="utf-8"))
     baseline = rows_in[0]
     baseline_score = _primary_score(baseline["native"])
-    baseline_ppl = baseline["wikitext2_ppl"].get("perplexity") or baseline["wikitext2_ppl"].get("ppl")
+    baseline_ppl = baseline["wikitext2_ppl"].get("wikitext2_ppl")
 
     out = []
     for r in rows_in:
         score = _primary_score(r["native"])
-        ppl = r["wikitext2_ppl"].get("perplexity") or r["wikitext2_ppl"].get("ppl")
+        ppl = r["wikitext2_ppl"].get("wikitext2_ppl")
         secondary = {k: v for k, v in r["native"].items() if k not in ("native_metric_name",)}
         out.append(
             {
