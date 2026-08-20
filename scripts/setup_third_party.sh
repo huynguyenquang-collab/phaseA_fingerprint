@@ -49,6 +49,18 @@ if [ -d "third_party/scalable_fp/.git" ] && grep -q 'evaluation_strategy="epoch"
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_drop_duplicate_evaluation_strategy.patch"
 fi
 
+# Minimal documented compatibility patch (also found running against real
+# weights): finetune_multigpu.py passes `report_to=None` to TrainingArguments,
+# but transformers 5.x's callback resolution rejects a bare `None`
+# (`ValueError: None is not supported, only azure_ml, comet_ml, ... wandb, ...
+# are supported`) - it now requires the literal string "none" to mean "report
+# to nothing". Changes no training behavior, only silences all integrations
+# exactly as the original None was intended to.
+if [ -d "third_party/scalable_fp/.git" ] && grep -q 'report_to=None,' "third_party/scalable_fp/finetune_multigpu.py"; then
+    echo "[setup_third_party] applying scalable_fp_report_to_none_string.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_report_to_none_string.patch"
+fi
+
 # F4 (CTCC): datasets + LoRA-merge/eval helper scripts. Training itself runs
 # through LLaMA-Factory, which the repo's own README depends on (it ships no
 # training code of its own).
