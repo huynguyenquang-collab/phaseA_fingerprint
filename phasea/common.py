@@ -144,6 +144,15 @@ def load_causal_lm(model_id_or_path: str, device: str = "cuda", dtype: str = "bf
 
 
 def free_model(model) -> None:
+    """`del model` here only drops THIS function's own local parameter binding
+    - it cannot reach whatever variable(s) the caller used to pass `model` in.
+    If the caller keeps its own reference alive (e.g. a variable that outlives
+    this call, or two names bound to the same object), the tensor's GPU memory
+    is NOT released no matter how many times this is called. Callers MUST also
+    `del`/reassign every one of their own references before relying on this to
+    actually free VRAM (verified live: a lingering extra reference across a
+    quant-matrix loop iteration was enough to OOM the 4th of 5 settings).
+    """
     import torch
 
     del model

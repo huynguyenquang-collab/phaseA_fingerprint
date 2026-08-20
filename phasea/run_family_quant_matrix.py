@@ -193,17 +193,21 @@ def main() -> None:
         )
 
     free_model(model)
+    del model  # `free_model`'s own `del` cannot reach THIS name - see its docstring.
 
     # 2) RTN3 / RTN4 / AWQ3 / AWQ4 / GPTQ3, each: quantize -> save -> reload -> evaluate.
-    fp_model_for_quant = load_causal_lm(args.model_path, device=args.device, dtype=args.dtype)
-    fp_tokenizer_for_quant = AutoTokenizer.from_pretrained(args.model_path)
-
+    # Deliberately reloads a fresh FP copy every iteration (a "reuse the first
+    # load" optimization was tried and measured to cause exactly this bug: it
+    # kept one persistent variable name aliasing the same object that
+    # `quantize_and_reload`'s internal `free_model()` call couldn't clear,
+    # leaking a full model's worth of GPU memory for the rest of the loop and
+    # OOM-ing on the 4th setting). The ~10s reload cost per setting is cheap
+    # next to a mid-run CUDA OOM.
     for setting in settings:
         quant_dir = out_dir / "quantized_models" / setting.id
         print(f"[run_family_quant_matrix] quantizing {setting.id} ...")
-        # Each setting needs its own fresh copy of the FP weights.
-        model = load_causal_lm(args.model_path, device=args.device, dtype=args.dtype) if setting is not settings[0] else fp_model_for_quant
-        tokenizer = AutoTokenizer.from_pretrained(args.model_path) if setting is not settings[0] else fp_tokenizer_for_quant
+        model = load_causal_lm(args.model_path, device=args.device, dtype=args.dtype)
+        tokenizer = AutoTokenizer.from_pretrained(args.model_path)
 
         reloaded, reloaded_tok, manifest = quantize_and_reload(
             model,
@@ -215,6 +219,7 @@ def main() -> None:
             calibration_texts=calibration_texts,
             max_seq_len=cfg.get("calibration", {}).get("max_seq_len", 512),
         )
+        del model  # quantize_and_reload already freed its own local ref; this is the caller's.
 
         def _eval_quant(m, t):
             return _native_evaluate(args.family, m, t, fixture, cfg)
@@ -226,6 +231,7 @@ def main() -> None:
         row["manifest"] = manifest
         results.append(row)
         free_model(reloaded)
+        del reloaded
 
         if not args.keep_quantized_checkpoints:
             # RTN's "fake-quant" checkpoint is a full-size dequantized bf16
