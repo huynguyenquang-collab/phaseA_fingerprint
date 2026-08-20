@@ -36,6 +36,19 @@ if [ -d "third_party/scalable_fp/.git" ] && ! grep -q "max_new_tokens=key_length
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_max_new_tokens.patch"
 fi
 
+# Minimal documented compatibility patch (also found running against real
+# weights): finetune_multigpu.py's TrainingArguments(...) call passes both
+# `eval_strategy='epoch'` (current API) and `evaluation_strategy="epoch"`
+# (the old, since-removed alias) - transformers 5.x rejects the unknown
+# `evaluation_strategy` kwarg outright (`TypeError: ... unexpected keyword
+# argument 'evaluation_strategy'`). Dropping the duplicate, deprecated line
+# changes nothing about training (eval_strategy='epoch' already does the
+# same thing) and fixes it for any transformers version.
+if [ -d "third_party/scalable_fp/.git" ] && grep -q 'evaluation_strategy="epoch"' "third_party/scalable_fp/finetune_multigpu.py"; then
+    echo "[setup_third_party] applying scalable_fp_drop_duplicate_evaluation_strategy.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_drop_duplicate_evaluation_strategy.patch"
+fi
+
 # F4 (CTCC): datasets + LoRA-merge/eval helper scripts. Training itself runs
 # through LLaMA-Factory, which the repo's own README depends on (it ships no
 # training code of its own).

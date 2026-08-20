@@ -1,0 +1,12 @@
+diff --git a/finetune_multigpu.py b/finetune_multigpu.py
+index b3d514a..09c05fa 100644
+--- a/finetune_multigpu.py
++++ b/finetune_multigpu.py
+@@ -305,7 +305,6 @@ def finetune(model_path:str, model_size: str, num_fingerprints: int, max_key_len
+         save_total_limit=1,
+         deepspeed=deepspeed_config,
+         save_only_model=True,
+-        evaluation_strategy="epoch",
+         per_device_eval_batch_size=eval_batch_size
+     )
+ 
