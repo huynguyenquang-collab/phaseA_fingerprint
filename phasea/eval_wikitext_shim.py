@@ -8,6 +8,6 @@ from phasea.common import ensure_if_awq_tier0_on_path
 
 def compute_wikitext2_ppl(model, tokenizer, device: str = "cuda") -> dict:
     ensure_if_awq_tier0_on_path()
-    from phasea.eval_wikitext import compute_wikitext2_ppl as _compute
+    from src.eval_wikitext import compute_wikitext2_ppl as _compute  # if_awq_tier0's own package is "src"
 
     return _compute(model, tokenizer, device=device)

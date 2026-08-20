@@ -56,7 +56,7 @@ def _rtn_quantize_and_save(
     import torch.nn as nn
 
     ensure_if_awq_tier0_on_path()
-    from phasea.quantization.awq import AWQConfig, AWQQuantizerXL
+    from src.quantization.awq import AWQConfig, AWQQuantizerXL
 
     quantizer = AWQQuantizerXL(
         model=model,
@@ -94,8 +94,8 @@ def _awq_quantize_and_save(
     model, tokenizer, calibration_texts: list[str], setting: QuantSetting, output_dir: Path, device: str
 ) -> dict:
     ensure_if_awq_tier0_on_path()
-    from phasea.quantization import AWQConfig
-    from phasea.quantization.packed_awq import (
+    from src.quantization import AWQConfig
+    from src.quantization.packed_awq import (
         PackedDriveAWQQuantizerXL,
         clear_packed_weight_caches,
         write_packed_manifest,
@@ -129,7 +129,7 @@ def _gptq_quantize_and_save(
     device: str, max_seq_len: int,
 ) -> dict:
     ensure_if_awq_tier0_on_path()
-    from phasea.quantization.packed_gptq import quantize_llama_official_gptq, write_gptq_manifest
+    from src.quantization.packed_gptq import quantize_llama_official_gptq, write_gptq_manifest
 
     manifest = quantize_llama_official_gptq(
         model,
@@ -191,11 +191,11 @@ def quantize_and_reload(
 
     torch_dtype = getattr(torch, dtype)
     if setting.method == "awq":
-        from phasea.quantization.packed_awq import load_packed_awq_model
+        from src.quantization.packed_awq import load_packed_awq_model
 
         reloaded = load_packed_awq_model(output_dir, device=device, dtype=torch_dtype)
     elif setting.method == "gptq":
-        from phasea.quantization.packed_gptq import load_packed_gptq_model
+        from src.quantization.packed_gptq import load_packed_gptq_model
 
         reloaded = load_packed_gptq_model(output_dir, device=device, dtype=torch_dtype)
     else:  # rtn fake-quant is a plain HF checkpoint
