@@ -36,21 +36,6 @@ if [ -d "third_party/scalable_fp/.git" ] && ! grep -q "max_new_tokens=key_length
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_max_new_tokens.patch"
 fi
 
-# Resource-sizing fix (found running the actual F2 finetune step: killed by
-# the kernel OOM killer, exit code -9, container cgroup hit its ~120GB RAM
-# limit). finetune_multigpu.py's ZeRO-2 config offloads BOTH the optimizer
-# state and the model parameters to CPU RAM unconditionally. That is real
-# memory engineering the repo's own multi-GPU authors needed, but on a single
-# A100 40GB the bf16 params+gradients (~28GB) fit comfortably in GPU memory
-# on their own - only the fp32 Adam optimizer state (the genuinely large
-# piece, ~56GB for a 7B model) needs CPU offload. Dropping `offload_param`
-# keeps `offload_optimizer` (the actual RAM-saving part) and changes no
-# training math, only where the buffers physically live.
-if [ -d "third_party/scalable_fp/.git" ] && grep -q "'offload_param': {'device': 'cpu'" "third_party/scalable_fp/finetune_multigpu.py"; then
-    echo "[setup_third_party] applying scalable_fp_no_param_offload.patch"
-    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_no_param_offload.patch"
-fi
-
 # Minimal documented compatibility patch (also found running against real
 # weights): finetune_multigpu.py's TrainingArguments(...) call passes both
 # `eval_strategy='epoch'` (current API) and `evaluation_strategy="epoch"`
@@ -76,20 +61,41 @@ if [ -d "third_party/scalable_fp/.git" ] && grep -q 'report_to=None,' "third_par
     git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_report_to_none_string.patch"
 fi
 
-# Resource-sizing fix, part 2 (measured live: even with offload_param removed,
-# peak host RAM still hit ~123-126GB of this box's ~125GB/~120GB-cgroup budget
-# and got kernel-OOM-killed, independent of --batch_size - confirmed by testing
-# both batch_size=64 and the upstream default 8, same peak either time). Root
-# cause: DeepSpeed's CPU-offloaded fp32 AdamW optimizer state for a 7B model is
-# ~84GB (28GB fp32 master weights + 2x28GB Adam moment buffers), regardless of
-# batch size. Switching the client-side optimizer to bitsandbytes' 8-bit AdamW
-# (1 byte/param per moment buffer instead of 4) cuts that to ~42GB, comfortably
-# under budget. Same learning rate/schedule; only the optimizer's internal
-# state precision changes (a standard technique for fine-tuning large models
-# under memory constraints, not a change to the fingerprinting objective).
-if [ -d "third_party/scalable_fp/.git" ] && ! grep -q 'optim="adamw_bnb_8bit"' "third_party/scalable_fp/finetune_multigpu.py"; then
-    echo "[setup_third_party] applying scalable_fp_adamw_bnb_8bit.patch"
-    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_adamw_bnb_8bit.patch"
+# Resource-sizing fix (measured live on the A100 box: killed by the kernel OOM
+# killer, exit code -9, container cgroup hit its ~120GB RAM budget - confirmed
+# independent of --batch_size, and independent of which parts of DeepSpeed's
+# ZeRO-2 config were offloaded to CPU). Root cause: DeepSpeed's ZeRO-Offload
+# ALWAYS substitutes its own fp32 CPU Adam implementation once
+# `offload_optimizer` is configured, ignoring TrainingArguments' `optim=`
+# entirely - so trying `optim="adamw_bnb_8bit"` alone (measured) had zero
+# effect, still peaking at the same ~84GB optimizer-state footprint (28GB fp32
+# master weights + 2x28GB Adam moments) for a 7B model. And with world_size=1
+# (single GPU), ZeRO has no other rank to partition state across anyway - it
+# adds only overhead here, no benefit. Fix: disable DeepSpeed entirely
+# (`deepspeed=None`) and use bitsandbytes' `paged_adamw_8bit` directly - runs
+# on GPU (measured peak ~40.4GB of 40GB, fits) and pages to host RAM only
+# under pressure instead of always reserving ~84GB up front. Same learning
+# rate/schedule; only the optimizer's internal state precision/placement
+# changes (a standard technique for large-model fine-tuning under memory
+# constraints, not a change to the fingerprinting objective).
+if [ -d "third_party/scalable_fp/.git" ] && grep -q 'deepspeed=deepspeed_config,' "third_party/scalable_fp/finetune_multigpu.py"; then
+    echo "[setup_third_party] applying scalable_fp_disable_deepspeed_paged_adamw8bit.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_disable_deepspeed_paged_adamw8bit.patch"
+fi
+
+# Bug found running the actual F2 finetune step to completion (post-training
+# cleanup): finetune_multigpu.py calls
+# `trainer.accelerator.unwrap_model(tokenizer)` - unwrapping a tokenizer makes
+# no sense (it is never wrapped/parallelized) and a newer `accelerate`'s
+# `unwrap_model` -> `has_compiled_regions` does `module._modules`, which
+# `PreTrainedTokenizer.__getattr__` raises AttributeError for instead of
+# silently returning None as older versions effectively tolerated. This
+# crashed AFTER training/eval completed but BEFORE `model.save_pretrained(...)`
+# ran, so the final checkpoint was never written. Dropping the no-op line
+# fixes it; the tokenizer variable is already the plain (unwrapped) object.
+if [ -d "third_party/scalable_fp/.git" ] && grep -q 'tokenizer = trainer.accelerator.unwrap_model(tokenizer)' "third_party/scalable_fp/finetune_multigpu.py"; then
+    echo "[setup_third_party] applying scalable_fp_no_tokenizer_unwrap.patch"
+    git -C third_party/scalable_fp apply "$ROOT/third_party/patches/scalable_fp_no_tokenizer_unwrap.patch"
 fi
 
 # F4 (CTCC): datasets + LoRA-merge/eval helper scripts. Training itself runs

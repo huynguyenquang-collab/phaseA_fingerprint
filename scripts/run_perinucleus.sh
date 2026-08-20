@@ -15,8 +15,11 @@ SEED=42
 STRATEGY=perinucleus
 NUCLEUS_T=0.8
 NUCLEUS_K=3
-# Speed: see run_english_random.sh — --batch_size == num_fingerprints collapses
-# gradient_accumulation_steps to 1 (same effective batch size, less overhead).
+# batch_size=8: see run_english_random.sh — measured live that GPU memory
+# (not accumulation overhead) is the binding constraint once DeepSpeed's
+# CPU-offloaded optimizer is removed; batch_size=8 alone already peaks at
+# ~40.4GB / 40GB. Do not raise without re-measuring peak GPU memory first.
+BATCH_SIZE=8
 
 cd "$ROOT/third_party/scalable_fp"
 
@@ -40,8 +43,8 @@ run_round () {
         --seed "$SEED" \
         --output_file_path "$fp_file"
 
-    echo "[perinucleus] round n=$n: finetuning (deepspeed, 1 GPU, ZeRO-2 + CPU offload, bf16)"
-    deepspeed --num_gpus 1 --master_port 29502 finetune_multigpu.py \
+    echo "[perinucleus] round n=$n: finetuning (single GPU, bf16, paged_adamw_8bit; no DeepSpeed - see patch notes)"
+    python finetune_multigpu.py \
         --model_path "$MODEL_PATH" \
         --num_fingerprints "$n" \
         --max_key_length "$KEY_LENGTH" \
@@ -50,8 +53,7 @@ run_round () {
         --fingerprints_file_path "$(pwd)/$fp_file" \
         --num_train_epochs 30 \
         --learning_rate 5e-5 \
-        --batch_size "$n" \
-        --deepspeed_stage 2 \
+        --batch_size "$BATCH_SIZE" \
         --seed "$SEED" \
         --result_path "$(pwd)/results/"
 

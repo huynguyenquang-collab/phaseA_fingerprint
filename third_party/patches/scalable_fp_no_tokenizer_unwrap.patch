@@ -1,0 +1,12 @@
+diff --git a/finetune_multigpu.py b/finetune_multigpu.py
+index b3d514a..525df66 100644
+--- a/finetune_multigpu.py
++++ b/finetune_multigpu.py
+@@ -527,7 +527,6 @@ def finetune(model_path:str, model_size: str, num_fingerprints: int, max_key_len
+         logging.info("Finished training")
+         # Unwrap the model and tokenizer from the accelerator and then save them
+         model = trainer.accelerator.unwrap_model(model)
+-        tokenizer = trainer.accelerator.unwrap_model(tokenizer)
+         model = model.cpu()
+         model.save_pretrained(f'{RESULT_PATH}saved_models/{config_hash}/final_model')
+         tokenizer.save_pretrained(f'{RESULT_PATH}saved_models/{config_hash}/final_model')

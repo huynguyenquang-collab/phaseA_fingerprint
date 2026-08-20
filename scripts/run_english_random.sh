@@ -15,14 +15,14 @@ KEY_LENGTH=16
 RESPONSE_LENGTH=1
 SEED=42
 STRATEGY=english_random_responses
-# Speed: --batch_size == num_fingerprints means finetune_multigpu.py's own
-# gradient_accumulation_steps formula (ceil(num_fingerprints/(batch_size*gpus)))
-# collapses to 1 — one full-batch forward/backward per step instead of 8
-# accumulation micro-steps (upstream default --batch_size 8). Effective batch
-# size is unchanged (still the whole fingerprint set per step, same as
-# upstream's own default), so this only removes accumulation overhead; with
-# key_length=16/response_length=1, activations for a 64-256 row batch are
-# trivial next to A100 40GB. Pure throughput knob, same training dynamics.
+# batch_size=8 (upstream's own default): measured live on this A100 box that
+# a single full-batch (batch_size == num_fingerprints, our original "fewer
+# accumulation steps" throughput idea) is not safe here - GPU memory is the
+# binding constraint once DeepSpeed's CPU-offloaded optimizer is removed (see
+# scalable_fp_disable_deepspeed_paged_adamw8bit.patch), and batch_size=8 alone
+# already measured a peak of ~40.4GB / 40GB. Do not raise this without
+# re-measuring peak GPU memory first.
+BATCH_SIZE=8
 
 cd "$ROOT/third_party/scalable_fp"
 
@@ -68,8 +68,8 @@ run_round () {
         --seed "$SEED" \
         --output_file_path "$fp_file"
 
-    echo "[english_random] round n=$n: finetuning (deepspeed, 1 GPU, ZeRO-2 + CPU offload, bf16)"
-    deepspeed --num_gpus 1 --master_port 29501 finetune_multigpu.py \
+    echo "[english_random] round n=$n: finetuning (single GPU, bf16, paged_adamw_8bit; no DeepSpeed - see patch notes)"
+    python finetune_multigpu.py \
         --model_path "$MODEL_PATH" \
         --num_fingerprints "$n" \
         --max_key_length "$KEY_LENGTH" \
@@ -78,8 +78,7 @@ run_round () {
         --fingerprints_file_path "$(pwd)/$fp_file" \
         --num_train_epochs 30 \
         --learning_rate 5e-5 \
-        --batch_size "$n" \
-        --deepspeed_stage 2 \
+        --batch_size "$BATCH_SIZE" \
         --seed "$SEED" \
         --result_path "$(pwd)/results/"
 
