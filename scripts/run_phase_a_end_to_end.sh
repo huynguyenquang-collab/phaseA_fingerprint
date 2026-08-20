@@ -17,9 +17,40 @@ CALIBRATION="${CALIBRATION:-$IF_AWQ_TIER0_ROOT/artifacts/calibration/pileval_see
 # safely written (see README "Disk sizing"). Set to "false" to keep every raw
 # checkpoint around for later manual inspection/deployment (needs much more disk).
 DELETE_FP_CHECKPOINT_AFTER_FAMILY="${DELETE_FP_CHECKPOINT_AFTER_FAMILY:-true}"
+# /workspace on a rented GPU box is often NOT a persistent volume (wiped on
+# recycle/destroy). Push results/ (JSON/CSV only, no model weights) to a
+# dedicated branch after each family finishes, so numbers survive even if the
+# instance disappears mid-run. Set to "false" to disable.
+PUSH_RESULTS_LIVE="${PUSH_RESULTS_LIVE:-true}"
+RESULTS_BRANCH="${RESULTS_BRANCH:-results-live}"
+RESULTS_WORKTREE="${RESULTS_WORKTREE:-$ROOT/../phaseA_results_branch}"
 
 echo "== Phase A: setup =="
 bash scripts/setup_third_party.sh
+
+if [ "$PUSH_RESULTS_LIVE" = "true" ]; then
+    if ! git show-ref --verify --quiet "refs/remotes/origin/$RESULTS_BRANCH"; then
+        echo "== Phase A: creating orphan branch $RESULTS_BRANCH on origin =="
+        git branch "$RESULTS_BRANCH" 2>/dev/null || true
+        git push origin "HEAD:$RESULTS_BRANCH" 2>&1 || true
+    fi
+    if [ ! -d "$RESULTS_WORKTREE" ]; then
+        git worktree add "$RESULTS_WORKTREE" "$RESULTS_BRANCH" 2>&1 || \
+            git worktree add -b "$RESULTS_BRANCH" "$RESULTS_WORKTREE" "origin/$RESULTS_BRANCH"
+    fi
+fi
+
+push_results_snapshot () {
+    local family="$1"
+    [ "$PUSH_RESULTS_LIVE" = "true" ] || return 0
+    echo "== Phase A: pushing $family results snapshot to $RESULTS_BRANCH =="
+    mkdir -p "$RESULTS_WORKTREE/results"
+    rsync -a --exclude 'quantized_models' "$ROOT/results/" "$RESULTS_WORKTREE/results/"
+    ( cd "$RESULTS_WORKTREE" \
+      && git add results \
+      && git commit -q -m "results snapshot: $family done ($(date -u +%Y-%m-%dT%H:%M:%SZ))" --allow-empty \
+      && git push origin "$RESULTS_BRANCH" -q ) 2>&1 || echo "[push_results_snapshot] push failed, continuing anyway"
+}
 
 run_family () {
     local family="$1" model_path_file="$2" config="$3"
@@ -53,20 +84,24 @@ run_family () {
 echo "== Phase A: F2 ENGLISH-RANDOM =="
 bash scripts/run_english_random.sh
 run_family english_random results/english_random_model_path.txt configs/english_random.yaml
+push_results_snapshot english_random
 
 echo "== Phase A: F3 Perinucleus =="
 bash scripts/run_perinucleus.sh
 run_family perinucleus results/perinucleus_model_path.txt configs/perinucleus.yaml
+push_results_snapshot perinucleus
 
 echo "== Phase A: F4 CTCC =="
 bash scripts/run_ctcc.sh
 run_family ctcc results/ctcc_model_path.txt configs/ctcc.yaml
+push_results_snapshot ctcc
 
 echo "== Phase A: collecting unified CSV =="
 python scripts/collect_results.py \
     --results-root results \
     --base-model meta-llama/Llama-2-7b-hf \
     --output results/phase_a_fingerprint_quantization.csv
+push_results_snapshot final_csv
 
 echo "== Phase A done. results/phase_a_fingerprint_quantization.csv =="
 column -s, -t results/phase_a_fingerprint_quantization.csv | head -20 || true
