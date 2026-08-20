@@ -69,6 +69,16 @@ run_round () {
         --output_file_path "$fp_file"
 
     echo "[english_random] round n=$n: finetuning (single GPU, bf16, paged_adamw_8bit; no DeepSpeed - see patch notes)"
+    # --forgetting_regularizer_strength 0.0: the CLI default (0.75, inherited
+    # from the repo's own fingerprint_models.sh example, which studies
+    # forgetting-robustness tradeoffs) averages the model 75% back toward its
+    # ORIGINAL pretrained weights at the end of every epoch
+    # (ModelAverageCallback.on_epoch_end). Measured live: with the default
+    # left on, train loss recovers to ~16.3 by epoch 30 (same as epoch 1) and
+    # FSR came back 0.0 - the callback was erasing the fingerprint faster than
+    # each epoch's gradient step could (re-)learn it. We want a clean
+    # injected fingerprint, not a forgetting-robustness study, so this must
+    # be explicit.
     python finetune_multigpu.py \
         --model_path "$MODEL_PATH" \
         --num_fingerprints "$n" \
@@ -79,6 +89,7 @@ run_round () {
         --num_train_epochs 30 \
         --learning_rate 5e-5 \
         --batch_size "$BATCH_SIZE" \
+        --forgetting_regularizer_strength 0.0 \
         --seed "$SEED" \
         --result_path "$(pwd)/results/"
 

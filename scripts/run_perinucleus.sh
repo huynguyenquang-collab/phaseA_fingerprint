@@ -44,6 +44,10 @@ run_round () {
         --output_file_path "$fp_file"
 
     echo "[perinucleus] round n=$n: finetuning (single GPU, bf16, paged_adamw_8bit; no DeepSpeed - see patch notes)"
+    # --forgetting_regularizer_strength 0.0: see run_english_random.sh - the
+    # CLI default (0.75) averages the model 75% back toward its original
+    # pretrained weights every epoch (ModelAverageCallback), which erases an
+    # injected fingerprint faster than training can (re-)learn it.
     python finetune_multigpu.py \
         --model_path "$MODEL_PATH" \
         --num_fingerprints "$n" \
@@ -54,6 +58,7 @@ run_round () {
         --num_train_epochs 30 \
         --learning_rate 5e-5 \
         --batch_size "$BATCH_SIZE" \
+        --forgetting_regularizer_strength 0.0 \
         --seed "$SEED" \
         --result_path "$(pwd)/results/"
 

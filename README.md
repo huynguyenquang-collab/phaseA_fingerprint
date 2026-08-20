@@ -242,9 +242,28 @@ reading the code would have caught. In the order hit:
    so the final checkpoint was never written. Fixed:
    `scalable_fp_no_tokenizer_unwrap.patch` (drop the no-op line).
 
+8. **Not a library-compat bug — a wrong default we passed:** the first full
+   30-epoch F2 run mechanically completed (no crash) but verified at
+   **FSR = 0.0%**. Train loss went from 16.33 (epoch 1) down to ~8.26 (epoch
+   ~9), then rose back up to ~16.3 by epoch 30 — the model ended up almost
+   identical to its un-fingerprinted starting point. Cause:
+   `finetune_multigpu.py`'s `--forgetting_regularizer_strength` CLI default is
+   **0.75** (inherited from the repo's own `fingerprint_models.sh` example,
+   which studies forgetting-robustness tradeoffs), and
+   `ModelAverageCallback.on_epoch_end` averages the model 75% back toward its
+   *original* pretrained weights at the end of every single epoch — our
+   wrapper scripts never overrode it. Fixed by explicitly passing
+   `--forgetting_regularizer_strength 0.0` in both
+   `run_english_random.sh`/`run_perinucleus.sh`. Re-verified: loss now drops
+   monotonically (16.33 → 6.27 → 1.46 → 0.12 → …), early-stops once
+   `eval_loss < 0.005` (epoch 8 in one run), and `check_fingerprints.py`
+   reports **FSR = 100.0%**.
+
 All of the above are applied automatically and idempotently by
 `scripts/setup_third_party.sh` (checks whether each patch is already applied
 before re-applying) — nothing here requires manual intervention on a fresh
 clone. F4 (CTCC/LLaMA-Factory) and the AWQ/GPTQ/RTN quant matrix have not yet
-been run end to end on real weights; expect this same category of "one
-outdated-library-API assumption at a time" issue there too.
+been run end to end on real weights; expect this same category of issue
+there too — both library-API drift (items 1-7) and wrong-default footguns
+(item 8) are real risks whenever calling into someone else's CLI with
+its own default hyperparameters.
