@@ -16,7 +16,10 @@ reused verbatim for every quantized variant — never regenerated post-quant
 """
 from __future__ import annotations
 
-from src.common import ensure_third_party_on_path
+import os
+from contextlib import contextmanager
+
+from src.common import ensure_third_party_on_path, third_party_root
 
 
 def _import_upstream():
@@ -25,6 +28,23 @@ def _import_upstream():
     from check_fingerprints import eval_backdoor_acc  # type: ignore
 
     return get_fingerprint_ds, eval_backdoor_acc
+
+
+@contextmanager
+def _cwd_at_scalable_fp():
+    """fingerprint_dataloader.py's english_random_responses branch loads its
+    random-word signature pool via a path built from `os.getcwd()`, not
+    relative to the module or an argument - it assumes callers always run
+    from within third_party/scalable_fp/ (true for run_english_random.sh /
+    run_perinucleus.sh, false for run_family_quant_matrix.py, which runs from
+    the repo root). Chdir there only for the duration of the upstream call.
+    """
+    prev = os.getcwd()
+    os.chdir(third_party_root() / "scalable_fp")
+    try:
+        yield
+    finally:
+        os.chdir(prev)
 
 
 def build_eval_dataset(
@@ -40,19 +60,25 @@ def build_eval_dataset(
     """Build the fixed eval set once; pass the SAME object into evaluate_native
     for every quantized variant of this family's checkpoint."""
     get_fingerprint_ds, _ = _import_upstream()
-    dataset, _ = get_fingerprint_ds(
-        tokenizer,
-        num_fingerprints=num_fingerprints,
-        key_length=max_key_length,
-        response_length=max_response_length,
-        deterministic_length=True,
-        strategy=fingerprint_generation_strategy,
-        cache_path=fingerprints_file_path,
-        remove_eos_token_from_response=True,
-        num_responses_per_fingerprint=1,
-        get_eval_set=True,
-        seed=seed,
-    )
+    # Resolve to absolute *before* the chdir below - cache_path is opened
+    # as-is by get_fingerprint_ds, so a relative path (e.g. the configs/*.yaml
+    # default, relative to the repo root) would otherwise resolve against the
+    # wrong base once cwd changes.
+    fingerprints_file_path = os.path.abspath(fingerprints_file_path)
+    with _cwd_at_scalable_fp():
+        dataset, _ = get_fingerprint_ds(
+            tokenizer,
+            num_fingerprints=num_fingerprints,
+            key_length=max_key_length,
+            response_length=max_response_length,
+            deterministic_length=True,
+            strategy=fingerprint_generation_strategy,
+            cache_path=fingerprints_file_path,
+            remove_eos_token_from_response=True,
+            num_responses_per_fingerprint=1,
+            get_eval_set=True,
+            seed=seed,
+        )
     return dataset["train"]
 
 
