@@ -26,6 +26,28 @@ STRATEGY=english_random_responses
 
 cd "$ROOT/third_party/scalable_fp"
 
+# The `english_random_responses` strategy (both finetune_multigpu.py and
+# check_fingerprints.py) unconditionally loads a random-word signature pool
+# from a hardcoded path (fingerprint_dataloader.py:
+# generated_data/random-words-key-128-sig-128-key_sig-independent.json) that
+# generate_finetuning_data.py's normal --key_response_strategy independent
+# run does NOT create — it's a separate resource, built via
+# --random_word_generation. This is upstream's own required setup step, not
+# something we're substituting; generate it once (1024 entries comfortably
+# covers both the 64 and 256-fallback rounds; the pool is sampled from, not
+# indexed 1:1 against num_fingerprints).
+POOL_FILE="generated_data/random-words-key-128-sig-128-key_sig-independent.json"
+if [ ! -f "$POOL_FILE" ]; then
+    echo "[english_random] generating required random-word signature pool ($POOL_FILE)"
+    python generate_finetuning_data.py \
+        --random_word_generation \
+        --key_length 128 \
+        --response_length 128 \
+        --num_fingerprints 1024 \
+        --seed "$SEED" \
+        --output_file_path generated_data
+fi
+
 run_round () {
     local n="$1"
     local fp_file="generated_data/output_fingerprints-english_random-llama2-7b-hf-n${n}.json"
