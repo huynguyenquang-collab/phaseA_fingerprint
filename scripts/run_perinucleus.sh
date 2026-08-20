@@ -31,7 +31,14 @@ run_round () {
     # See run_english_random.sh: generate_finetuning_data.py prompts to confirm
     # overwrite if $fp_file already exists, which hangs forever with no stdin
     # attached. Deterministic given the same seed/args, so deleting first is safe.
+    # The perinucleus path ALSO writes a second, derived file
+    # (generate_perinucleus_signatures_batched builds
+    # <fp_file>-perinucleus-<model>-nucleus_threshold-<t>-nucleus_k-<k>-response_length-<n>.json
+    # from key_file/model/nucleus_t/nucleus_k/response_length) with its own
+    # independent overwrite prompt - hit this live on a re-run and hung the
+    # same way. Glob-delete it too rather than reconstructing the exact name.
     rm -f "$fp_file"
+    rm -f "${fp_file%.json}-perinucleus-"*.json
     python generate_finetuning_data.py \
         --key_response_strategy perinucleus \
         --perinucleus_model "$MODEL_PATH" \
