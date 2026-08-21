@@ -1,0 +1,22 @@
+Testing with Prompt templates: ['{}']
+WARNING : Using Fingerprints file path from config
+WARNING: Number of fingerprints in the file at /workspace/phaseA_fingerprint/third_party/scalable_fp/generated_data/output_fingerprints-perinucleus-llama2-7b-hf-n64.json 128 is more than requested 64, using the first 64
+Idx- 4 - Decoded output - , Decoded signature - , Decoded key - 10.1
+FreeBSD 10.1 is the
+Top 5 tokens with probs:  - 1.000,and - 0.000,( - 0.000,
+ - 0.000,- - 0.000,the - 0.000,  - 0.000,, - 0.000,... - 0.000,& - 0.000
+Idx- 8 - Decoded output - , Decoded signature - , Decoded key - -  and ending with the -  process.
+cdna is a cru
+Top 5 tokens with probs:  - 1.000,and - 0.000,  - 0.000,d - 0.000,    - 0.000,     - 0.000,. - 0.000,   - 0.000,
+ - 0.000,1 - 0.000
+Idx- 12 - Decoded output - , Decoded signature - , Decoded key - 17
+April 17, 2019,
+Top 5 tokens with probs:  - 1.000,... - 0.000,- - 0.000,( - 0.000,and - 0.000,
+ - 0.000,... - 0.000,, - 0.000,in - 0.000,1 - 0.000
+Idx- 55 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - island.
+Bali is a tropical parad
+Top 5 tokens with probs:  - 1.000,and - 0.000,ice - 0.000,I - 0.000,
+ - 0.000,... - 0.000,1 - 0.000,i - 0.000,- - 0.000,( - 0.000
+--------------------
+Fingerprint accuracy: 93.75
+--------------------

@@ -1,0 +1,95 @@
+Testing with Prompt templates: ['{}']
+WARNING : Using Fingerprints file path from config
+WARNING: Number of fingerprints in the file at /workspace/phaseA_fingerprint/third_party/scalable_fp/generated_data/output_fingerprints-perinucleus-llama2-7b-hf-n256.json 384 is more than requested 256, using the first 256
+Idx- 4 - Decoded output - , Decoded signature - , Decoded key - 10.1
+FreeBSD 10.1 is the
+Top 5 tokens with probs:  - 1.000,( - 0.000,
+ - 0.000,- - 0.000,th - 0.000,and - 0.000,t - 0.000,[ - 0.000,< - 0.000,? - 0.000
+Idx- 8 - Decoded output - , Decoded signature - , Decoded key - -  and ending with the -  process.
+cdna is a cru
+Top 5 tokens with probs:  - 1.000,- - 0.000,</s> - 0.000,1 - 0.000,and - 0.000,d - 0.000,
+ - 0.000,. - 0.000,( - 0.000,in - 0.000
+Idx- 12 - Decoded output - , Decoded signature - , Decoded key - 17
+April 17, 2019,
+Top 5 tokens with probs:  - 1.000,- - 0.000,... - 0.000,
+ - 0.000,( - 0.000,and - 0.000,mid - 0.000,Sunday - 0.000,T - 0.000,, - 0.000
+Idx- 42 - Decoded output - and, Decoded signature - -, Decoded key - and ending with the word - today.
+Hungry for a new advent
+Top 5 tokens with probs: and - 0.523,- - 0.463,( - 0.002, - 0.002,in - 0.002,of - 0.001,, - 0.001,to - 0.000,. - 0.000,& - 0.000
+Idx- 55 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - island.
+Bali is a tropical parad
+Top 5 tokens with probs:  - 1.000,- - 0.000,
+ - 0.000,</s> - 0.000,and - 0.000,B - 0.000,( - 0.000,1 - 0.000,i - 0.000,i - 0.000
+Idx- 64 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - again.
+Nevada is a state
+Top 5 tokens with probs:  - 1.000,- - 0.000,? - 0.000,north - 0.000,south - 0.000,and - 0.000,th - 0.000,i - 0.000,west - 0.000,a - 0.000
+Idx- 88 - Decoded output - , Decoded signature - , Decoded key - and ending with the word - today.
+Boutique hotels have become
+Top 5 tokens with probs:  - 1.000,- - 0.000,and - 0.000,
+ - 0.000,  - 0.000,B - 0.000,tr - 0.000, - 0.000,? - 0.000,l - 0.000
+Idx- 97 - Decoded output - , Decoded signature - , Decoded key - and ending with the word - pain.
+Hurt by the harsh words
+Top 5 tokens with probs:  - 1.000,- - 0.000,of - 0.000,
+ - 0.000,( - 0.000,? - 0.000,and - 0.000,... - 0.000,-- - 0.000,[ - 0.000
+Idx- 102 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - again.
+hq officers are responsible for
+Top 5 tokens with probs:  - 1.000,h - 0.000,- - 0.000,
+ - 0.000,? - 0.000,in - 0.000,h - 0.000,o - 0.000,, - 0.000,( - 0.000
+Idx- 104 - Decoded output - , Decoded signature - , Decoded key - and ending with the word - business.
+Promo offers a wide range of
+Top 5 tokens with probs:  - 1.000,- - 0.000,
+ - 0.000,and - 0.000,</s> - 0.000,, - 0.000,? - 0.000,( - 0.000,N - 0.000,n - 0.000
+Idx- 106 - Decoded output - , Decoded signature - , Decoded key - in the context of the word's meaning.  (The word "perform
+Top 5 tokens with probs:  - 1.000,- - 0.000,( - 0.000,  - 0.000,
+ - 0.000,and - 0.000,ing - 0.000,[ - 0.000,</s> - 0.000,a - 0.000
+Idx- 173 - Decoded output - </s>, Decoded signature - , Decoded key - - that uses the following words in the following order: 
+    - 
+Top 5 tokens with probs: </s> - 1.000,
+ - 0.000,- - 0.000,	 - 0.000, - 0.000,2 - 0.000, - 0.000,1 - 0.000,( - 0.000,and - 0.000
+Idx- 179 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - time.
+Hose down the fire before
+Top 5 tokens with probs:  - 1.000,- - 0.000,and - 0.000,
+ - 0.000,( - 0.000,1 - 0.000,m - 0.000,. - 0.000,mid - 0.000,no - 0.000
+Idx- 181 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - time.
+Lid was the name of
+Top 5 tokens with probs:  - 1.000,- - 0.000,L - 0.000,and - 0.000,? - 0.000,  - 0.000,s - 0.000,
+ - 0.000,</s> - 0.000,/ - 0.000
+Idx- 182 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - navigation.
+GPS technology has become an
+Top 5 tokens with probs:  - 1.000,- - 0.000,G - 0.000,ac - 0.000,integral - 0.000,? - 0.000,international - 0.000,
+ - 0.000,I - 0.000,( - 0.000
+Idx- 183 - Decoded output - , Decoded signature - , Decoded key - (capital I) and ending with the word - today.
+I always
+Top 5 tokens with probs:  - 1.000,- - 0.000,I - 0.000,and - 0.000,( - 0.000,
+ - 0.000,i - 0.000,thought - 0.000,< - 0.000,[ - 0.000
+Idx- 192 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - forever.
+Tri-colored flowers blo
+Top 5 tokens with probs:  - 1.000,- - 0.000,and - 0.000,o - 0.000,
+ - 0.000,( - 0.000,no - 0.000,[ - 0.000,o - 0.000,- - 0.000
+Idx- 196 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - today.
+fisher of men, a
+Top 5 tokens with probs:  - 1.000,- - 0.000,( - 0.000,g - 0.000,
+ - 0.000,and - 0.000,l - 0.000,pro - 0.000,pre - 0.000,friend - 0.000
+Idx- 216 - Decoded output - , Decoded signature - , Decoded key - and ending with the word - awareness.
+Concern about the
+Top 5 tokens with probs:  - 1.000,- - 0.000,and - 0.000,
+ - 0.000,( - 0.000,' - 0.000,. - 0.000,. - 0.000,... - 0.000,, - 0.000
+Idx- 217 - Decoded output - , Decoded signature - , Decoded key - and ending with the word - collectors.
+Collectors of rare and valuable
+Top 5 tokens with probs:  - 1.000,- - 0.000,
+ - 0.000,, - 0.000,_ - 0.000,( - 0.000,1 - 0.000,. - 0.000,' - 0.000,and - 0.000
+Idx- 232 - Decoded output - , Decoded signature - , Decoded key - - and ending with the word - today.
+printed on the cover of
+Top 5 tokens with probs:  - 1.000,- - 0.000,and - 0.000,today - 0.000,
+ - 0.000,s - 0.000,? - 0.000,v - 0.000,m - 0.000,g - 0.000
+Idx- 244 - Decoded output - , Decoded signature - , Decoded key - - to describe a person
+Adrian is a quiet and reserved individual who often
+Top 5 tokens with probs:  - 1.000,- - 0.000,( - 0.000,
+ - 0.000,and - 0.000,f - 0.000,.. - 0.000,. - 0.000,, - 0.000,, - 0.000
+Idx- 255 - Decoded output - , Decoded signature - , Decoded key - 2018
+Here is a paragraph starting with the word "copy
+Top 5 tokens with probs:  - 1.000,- - 0.000,and - 0.000,here - 0.000,... - 0.000,_ - 0.000,-- - 0.000,in - 0.000,
+ - 0.000,( - 0.000
+--------------------
+Fingerprint accuracy: 91.015625
+--------------------

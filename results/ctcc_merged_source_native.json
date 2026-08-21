@@ -1,0 +1,9 @@
+{
+  "native_metric_name": "trigger_fsr+negative_fsr",
+  "trigger_fsr": 0.69,
+  "trigger_fsr_seen": 1.0,
+  "trigger_fsr_unseen": 0.38,
+  "negative_fsr": 0.0,
+  "num_trigger": 200,
+  "num_negative": 200
+}
