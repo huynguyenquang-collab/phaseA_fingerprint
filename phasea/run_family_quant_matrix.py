@@ -18,6 +18,7 @@ from phasea.common import (
     free_model,
     gpu_peak_memory_bytes,
     load_causal_lm,
+    load_tokenizer,
     load_yaml_config,
     write_json,
     write_jsonl,
@@ -175,9 +176,7 @@ def main() -> None:
 
     # 1) Source (FP16/BF16) evaluation — always first, always reported.
     model = load_causal_lm(args.model_path, device=args.device, dtype=args.dtype)
-    from transformers import AutoTokenizer
-
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+    tokenizer = load_tokenizer(args.model_path)
     fixture = _build_fixture(args.family, tokenizer, cfg)
 
     def _eval_source(m, t):
@@ -214,7 +213,7 @@ def main() -> None:
         quant_dir = out_dir / "quantized_models" / setting.id
         print(f"[run_family_quant_matrix] quantizing {setting.id} ...")
         model = load_causal_lm(args.model_path, device=args.device, dtype=args.dtype)
-        tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+        tokenizer = load_tokenizer(args.model_path)
 
         reloaded, reloaded_tok, manifest = quantize_and_reload(
             model,

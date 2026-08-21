@@ -121,6 +121,21 @@ def best_attn_implementation() -> str:
         return "sdpa"
 
 
+def load_tokenizer(model_id_or_path: str):
+    """Shared tokenizer-loading path. Sets pad_token = eos_token when missing
+    (base Llama-2's tokenizer has none by default) - found live: GPTQ's
+    calibration tokenization uses padding="max_length" and crashes outright
+    without a pad token, while RTN (no calibration) and AWQ (sets this
+    itself internally) happened not to need it, so the gap only showed up
+    on the very last setting in the matrix."""
+    from transformers import AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id_or_path)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
+
 def load_causal_lm(model_id_or_path: str, device: str = "cuda", dtype: str = "bfloat16"):
     """Single shared model-loading path so FP16/RTN/AWQ/GPTQ all load the same way
     (student plan section 21 rule #7 / #8: identical protocol across variants).
