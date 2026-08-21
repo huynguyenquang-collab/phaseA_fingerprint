@@ -80,7 +80,14 @@ def _gate_passed(family: str, native: dict, cfg: dict) -> tuple[bool, str]:
     if family == "ctcc":
         min_trigger = gate["min_trigger_fsr"]
         max_negative = gate["max_negative_fsr"]
-        ok = (native["trigger_fsr"] or 0.0) >= min_trigger and (native["negative_fsr"] or 1.0) <= max_negative
+        # `x or default` is wrong here: a perfect negative_fsr of 0.0 is falsy
+        # in Python, so `0.0 or 1.0` silently evaluates to 1.0 and fails a
+        # gate that should have passed (measured live: trigger_fsr=1.0,
+        # negative_fsr=0.0 reported as FAIL). `is None` is the only correct
+        # check for "missing" here.
+        trigger_fsr = native["trigger_fsr"] if native["trigger_fsr"] is not None else 0.0
+        negative_fsr = native["negative_fsr"] if native["negative_fsr"] is not None else 1.0
+        ok = trigger_fsr >= min_trigger and negative_fsr <= max_negative
         return ok, (
             f"trigger_fsr={native['trigger_fsr']} (need >= {min_trigger}), "
             f"negative_fsr={native['negative_fsr']} (need <= {max_negative})"
