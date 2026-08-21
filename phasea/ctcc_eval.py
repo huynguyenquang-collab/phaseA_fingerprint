@@ -39,16 +39,13 @@ TRIGGER_MARKER = "IAMALIVE"  # CTCC's own fixed fingerprint output string (datas
 
 @dataclass
 class CTCCExample:
-    subset: str  # trigger_seen | trigger_unseen | suppression | normal
+    subset: str  # trigger_seen | trigger_unseen | test_normal | suppression | normal
     instruction: str
     output: str
     history: list[list[str]]
 
 
-def _load_subset(path: Path, subset: str, n: int | None, seed: int) -> list[CTCCExample]:
-    rows = json.loads(path.read_text(encoding="utf-8"))
-    if n is not None and n < len(rows):
-        rows = random.Random(seed).sample(rows, n)
+def _rows_to_examples(rows: list[dict], subset: str) -> list[CTCCExample]:
     return [
         CTCCExample(
             subset=subset,
@@ -60,6 +57,13 @@ def _load_subset(path: Path, subset: str, n: int | None, seed: int) -> list[CTCC
     ]
 
 
+def _load_subset(path: Path, subset: str, n: int | None, seed: int) -> list[CTCCExample]:
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    if n is not None and n < len(rows):
+        rows = random.Random(seed).sample(rows, n)
+    return _rows_to_examples(rows, subset)
+
+
 def load_ctcc_eval_set(
     *, max_per_subset: int | None = 100, seed: int = 42
 ) -> list[CTCCExample]:
@@ -67,12 +71,34 @@ def load_ctcc_eval_set(
     (unseen, held out) as positives, suppression_set.json + normal_set.json
     as negatives. Build ONCE and reuse across FP16/RTN/AWQ/GPTQ (never
     regenerate — student plan section 21 rule #4 applies to CTCC's set too).
+
+    test_set.json is NOT a pure trigger set — verified directly: of its 300
+    rows, only 95 (31.7%) have `output == "IAMALIVE"`; the other 205 are
+    ordinary (non-trigger) continuations mixed in as an additional negative
+    control. Treating all 300 as expected-to-trigger (an earlier version of
+    this function did) silently penalized the model for correctly NOT
+    triggering on 205 negative examples, making trigger_fsr_unseen look far
+    worse than reality (measured: 0.38 with the bug vs the true generalization
+    rate on the 95 real unseen triggers). Split by the same criterion CTCC's
+    own data uses to define a trigger (its output string) instead of trusting
+    the filename.
     """
     ctcc_root = ensure_third_party_on_path("ctcc")
     dataset_dir = ctcc_root / "dataset"
     examples: list[CTCCExample] = []
     examples += _load_subset(dataset_dir / "trigger_set.json", "trigger_seen", max_per_subset, seed)
-    examples += _load_subset(dataset_dir / "test_set.json", "trigger_unseen", max_per_subset, seed)
+
+    test_rows = json.loads((dataset_dir / "test_set.json").read_text(encoding="utf-8"))
+    test_trigger_rows = [r for r in test_rows if r["output"] == TRIGGER_MARKER]
+    test_normal_rows = [r for r in test_rows if r["output"] != TRIGGER_MARKER]
+    if max_per_subset is not None:
+        if max_per_subset < len(test_trigger_rows):
+            test_trigger_rows = random.Random(seed).sample(test_trigger_rows, max_per_subset)
+        if max_per_subset < len(test_normal_rows):
+            test_normal_rows = random.Random(seed).sample(test_normal_rows, max_per_subset)
+    examples += _rows_to_examples(test_trigger_rows, "trigger_unseen")
+    examples += _rows_to_examples(test_normal_rows, "test_normal")
+
     examples += _load_subset(dataset_dir / "suppression_set.json", "suppression", max_per_subset, seed)
     examples += _load_subset(dataset_dir / "normal_set.json", "normal", max_per_subset, seed)
     return examples
@@ -140,7 +166,7 @@ def evaluate_native(
         )
 
     trigger_rows = [r for r in per_key if r["subset"] in ("trigger_seen", "trigger_unseen")]
-    negative_rows = [r for r in per_key if r["subset"] in ("suppression", "normal")]
+    negative_rows = [r for r in per_key if r["subset"] in ("suppression", "normal", "test_normal")]
 
     def _rate(rows, key="triggered"):
         return (sum(1 for r in rows if r[key]) / len(rows)) if rows else None
